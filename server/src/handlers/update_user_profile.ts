@@ -1,18 +1,42 @@
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type UpdateUserProfileInput, type User } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateUserProfile(input: UpdateUserProfileInput): Promise<User> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to update user profile information
-    // (full name, phone number) and return the updated user data.
-    return Promise.resolve({
-        id: input.user_id,
-        email: 'user@example.com',
-        password_hash: 'hashed_password_placeholder',
-        full_name: input.full_name || 'Updated Name',
-        phone_number: input.phone_number || '+1234567890',
-        balance: 100000,
-        is_verified: true,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as User);
-}
+export const updateUserProfile = async (input: UpdateUserProfileInput): Promise<User> => {
+  try {
+    // Build update object with only provided fields
+    const updateData: Record<string, any> = {
+      updated_at: new Date()
+    };
+
+    if (input.full_name !== undefined) {
+      updateData['full_name'] = input.full_name;
+    }
+
+    if (input.phone_number !== undefined) {
+      updateData['phone_number'] = input.phone_number;
+    }
+
+    // Update user profile
+    const result = await db.update(usersTable)
+      .set(updateData)
+      .where(eq(usersTable.id, input.user_id))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error(`User with id ${input.user_id} not found`);
+    }
+
+    // Convert numeric fields back to numbers before returning
+    const user = result[0];
+    return {
+      ...user,
+      balance: parseFloat(user.balance) // Convert string back to number
+    };
+  } catch (error) {
+    console.error('User profile update failed:', error);
+    throw error;
+  }
+};

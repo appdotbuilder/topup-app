@@ -1,17 +1,27 @@
+import { db } from '../db';
+import { serviceProvidersTable } from '../db/schema';
 import { type GetServicesByCategoryInput, type ServiceProvider } from '../schema';
+import { eq, and } from 'drizzle-orm';
 
 export async function getServicesByCategory(input: GetServicesByCategoryInput): Promise<ServiceProvider[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch all active service providers
-    // for a specific category (games, e-money, pulsa, etc.) from the database.
-    return Promise.resolve([
-        {
-            id: 1,
-            name: `Sample ${input.category} Provider`,
-            category: input.category,
-            logo_url: null,
-            is_active: true,
-            created_at: new Date()
-        }
-    ] as ServiceProvider[]);
+  try {
+    // Query active service providers for the specified category
+    const results = await db.select()
+      .from(serviceProvidersTable)
+      .where(and(
+        eq(serviceProvidersTable.category, input.category),
+        eq(serviceProvidersTable.is_active, true)
+      ))
+      .execute();
+
+    // Map results to match the ServiceProvider schema type
+    return results.map(provider => ({
+      ...provider,
+      // All fields are already in correct format, no numeric conversions needed
+      // as this table doesn't have any numeric columns that need conversion
+    }));
+  } catch (error) {
+    console.error('Failed to fetch services by category:', error);
+    throw error;
+  }
 }

@@ -1,19 +1,25 @@
+import { db } from '../db';
+import { serviceProductsTable } from '../db/schema';
 import { type ServiceProduct } from '../schema';
+import { eq, and } from 'drizzle-orm';
 
-export async function getServiceProducts(providerId: number): Promise<ServiceProduct[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch all active service products
-    // for a specific provider ID from the database.
-    return Promise.resolve([
-        {
-            id: 1,
-            provider_id: providerId,
-            name: 'Sample Product',
-            description: 'Sample product description',
-            price: 10000,
-            nominal_value: '10GB',
-            is_active: true,
-            created_at: new Date()
-        }
-    ] as ServiceProduct[]);
-}
+export const getServiceProducts = async (providerId: number): Promise<ServiceProduct[]> => {
+  try {
+    const results = await db.select()
+      .from(serviceProductsTable)
+      .where(and(
+        eq(serviceProductsTable.provider_id, providerId),
+        eq(serviceProductsTable.is_active, true)
+      ))
+      .execute();
+
+    // Convert numeric fields from string to number
+    return results.map(product => ({
+      ...product,
+      price: parseFloat(product.price)
+    }));
+  } catch (error) {
+    console.error('Get service products failed:', error);
+    throw error;
+  }
+};
